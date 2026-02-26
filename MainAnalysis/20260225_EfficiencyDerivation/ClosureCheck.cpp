@@ -20,19 +20,20 @@ int main(int argc, char *argv[])
    TFile InputFile(InputFileName.c_str());
    TFile OutputFile(OutputFileName.c_str(), "RECREATE");
    
-   TH1D HGenPion("HGenPion", ";;", 50, 0, 5);
-   TH1D HGenKaon("HGenKaon", ";;", 50, 0, 5);
-   TH1D HGenProton("HGenProton", ";;", 50, 0, 5);
+   TH1D HGenPion("HGenPion", ";;", 50, 0, 8);
+   TH1D HGenKaon("HGenKaon", ";;", 50, 0, 8);
+   TH1D HGenProton("HGenProton", ";;", 50, 0, 8);
 
-   TH1D HRecoPion("HRecoPion", ";;", 50, 0, 5);
-   TH1D HRecoKaon("HRecoKaon", ";;", 50, 0, 5);
-   TH1D HRecoProton("HRecoProton", ";;", 50, 0, 5);
+   TH1D HRecoPion("HRecoPion", ";;", 50, 0, 8);
+   TH1D HRecoKaon("HRecoKaon", ";;", 50, 0, 8);
+   TH1D HRecoProton("HRecoProton", ";;", 50, 0, 8);
    
-   TH1D HRecoPionCorrected("HRecoPionCorrected", ";;", 50, 0, 5);
-   TH1D HRecoKaonCorrected("HRecoKaonCorrected", ";;", 50, 0, 5);
-   TH1D HRecoProtonCorrected("HRecoProtonCorrected", ";;", 50, 0, 5);
+   TH1D HRecoPionCorrected("HRecoPionCorrected", ";;", 50, 0, 8);
+   TH1D HRecoKaonCorrected("HRecoKaonCorrected", ";;", 50, 0, 8);
+   TH1D HRecoProtonCorrected("HRecoProtonCorrected", ";;", 50, 0, 8);
 
-   TH1D HRecoPionMistagAsKaon("HRecoPionMistagAsKaon", ";;", 50, 0, 5);
+   TH1D HRecoPionMistagAsKaon("HRecoPionMistagAsKaon", ";;", 50, 0, 8);
+   TH1D HRecoProtonMistagAsKaon("HRecoProtonMistagAsKaon", ";;", 50, 0, 8);
    
    StrangenessTreeMessenger M(InputFile);
 
@@ -81,18 +82,29 @@ int main(int argc, char *argv[])
          if(M.RecoPIDPion[iR] >= 2)
          {
             HRecoPion.Fill(P);
-            HRecoPionCorrected.Fill(P, M.RecoEfficiencyPi[iR] / M.RecoEfficiencyPiAsPi[iR]);
-            HRecoPionMistagAsKaon.Fill(P, M.RecoEfficiencyPi[iR] / M.RecoEfficiencyPiAsPi[iR] * M.RecoEfficiencyPiAsK[iR]);
+            HRecoPionCorrected.Fill(P,
+               M.RecoEfficiencyPi[iR] / M.RecoGenEfficiencyPi[iR] / M.RecoEfficiencyPiAsPi[iR]);
+            HRecoPionMistagAsKaon.Fill(P,
+               M.RecoEfficiencyPi[iR] / M.RecoGenEfficiencyPi[iR] / M.RecoEfficiencyPiAsPi[iR]
+                  * M.RecoEfficiencyPiAsK[iR]);
          }
          if(M.RecoPIDKaon[iR] >= 2)
          {
             HRecoKaon.Fill(P);
-            HRecoKaonCorrected.Fill(P, M.RecoEfficiencyK[iR] / M.RecoEfficiencyKAsK[iR]);
+            HRecoKaonCorrected.Fill(P,
+               M.RecoEfficiencyK[iR] / M.RecoGenEfficiencyK[iR] / M.RecoEfficiencyKAsK[iR]);
          }
          if(M.RecoPIDProton[iR] >= 2)
          {
+            if(M.RecoEfficiencyPAsP[iR] == 0)
+               continue;
+
             HRecoProton.Fill(P);
-            HRecoProtonCorrected.Fill(P, M.RecoEfficiencyP[iR] / M.RecoEfficiencyPAsP[iR]);
+            HRecoProtonCorrected.Fill(P,
+               M.RecoEfficiencyP[iR] / M.RecoGenEfficiencyP[iR] / M.RecoEfficiencyPAsP[iR]);
+            HRecoProtonMistagAsKaon.Fill(P,
+               M.RecoEfficiencyP[iR] / M.RecoGenEfficiencyP[iR] / M.RecoEfficiencyPAsP[iR]
+                  * M.RecoEfficiencyPAsK[iR]);
          }
       }  
    }
@@ -110,6 +122,7 @@ int main(int argc, char *argv[])
    HRecoProtonCorrected.Write();
 
    HRecoPionMistagAsKaon.Write();
+   HRecoProtonMistagAsKaon.Write();
 
    OutputFile.Close();
    InputFile.Close();
