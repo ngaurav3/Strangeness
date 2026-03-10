@@ -42,9 +42,9 @@ void DrawAcceptanceLines(double YMin, double YMax)
 
    for(TLine *L : {&L1, &L2})
    {
-      L->SetLineColor(kMagenta + 1);
-      L->SetLineWidth(4);
-      L->SetLineStyle(7);
+      L->SetLineColor(kBlack);
+      L->SetLineWidth(6);
+      L->SetLineStyle(1);
       L->Draw("same");
    }
 
