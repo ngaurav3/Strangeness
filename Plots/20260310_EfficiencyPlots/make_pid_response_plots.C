@@ -28,9 +28,26 @@ TGraph *MakePTThresholdGraph(double PTMin)
    }
 
    G->SetLineColor(kRed + 1);
-   G->SetLineWidth(2);
+   G->SetLineWidth(4);
    G->SetLineStyle(2);
    return G;
+}
+
+void DrawAcceptanceLines(double YMin, double YMax)
+{
+   double X = cos(TMath::Pi() / 9.0);
+
+   TLine *L1 = new TLine(-X, YMin, -X, YMax);
+   TLine *L2 = new TLine(+X, YMin, +X, YMax);
+
+   for(TLine *L : {L1, L2})
+   {
+      L->SetLineColor(kMagenta + 1);
+      L->SetLineWidth(3);
+      L->SetLineStyle(7);
+      L->Draw("same");
+      delete L;
+   }
 }
 
 void DrawPIDOne(TFile &File, const char *DenominatorName, const char *NumeratorName,
@@ -55,6 +72,7 @@ void DrawPIDOne(TFile &File, const char *DenominatorName, const char *NumeratorN
    Efficiency->Draw("colz");
    TGraph *Threshold = MakePTThresholdGraph(0.4);
    Threshold->Draw("l same");
+   DrawAcceptanceLines(0.15, 100.0);
    Canvas.SaveAs(Form("%s.pdf", OutputBase));
    Canvas.SaveAs(Form("%s.png", OutputBase));
 
