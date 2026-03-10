@@ -3,7 +3,7 @@
 set -euo pipefail
 
 base_dir="$(cd "$(dirname "$0")" && pwd)"
-mc_input="${MC_INPUT:-../../../../Samples/merged_mc_v2.2.root}"
+mc_input="${MC_INPUT:-../../../../Samples/merged_mc_v2.3.root}"
 data_hist_input="${DATA_HIST_INPUT:-PhiSBHistogramsData.root}"
 
 run_case() {

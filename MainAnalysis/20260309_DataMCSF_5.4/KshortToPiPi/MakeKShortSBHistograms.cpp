@@ -10,13 +10,13 @@
 #include "TTree.h"
 
 namespace {
-constexpr double kKaonMass = 0.493677;
-constexpr double kPhiMassWindowMin = 0.99;
-constexpr double kPhiMassWindowMax = 1.06;
-constexpr int kPhiMassBins = 280;
+constexpr double kPionMass = 0.13957039;
+constexpr double kKShortMassWindowMin = 0.30;
+constexpr double kKShortMassWindowMax = 1.00;
+constexpr int kKShortMassBins = 280;
 constexpr double kAbsCosMin = 0.15;
 constexpr double kAbsCosMax = 0.675;
-constexpr long long kKaonTagThreshold = 2;
+constexpr long long kPionTagThreshold = 2;
 constexpr int kMaxReco = 10000;
 
 struct TrackKinematics {
@@ -24,14 +24,14 @@ struct TrackKinematics {
   double py = 0.0;
   double pz = 0.0;
   double charge = 0.0;
-  long long kaonTag = 0;
+  long long pionTag = 0;
 };
 
 double buildMass(const TrackKinematics& t1, const TrackKinematics& t2) {
   const double p1sq = t1.px * t1.px + t1.py * t1.py + t1.pz * t1.pz;
   const double p2sq = t2.px * t2.px + t2.py * t2.py + t2.pz * t2.pz;
-  const double e1 = std::sqrt(p1sq + kKaonMass * kKaonMass);
-  const double e2 = std::sqrt(p2sq + kKaonMass * kKaonMass);
+  const double e1 = std::sqrt(p1sq + kPionMass * kPionMass);
+  const double e2 = std::sqrt(p2sq + kPionMass * kPionMass);
 
   const double px = t1.px + t2.px;
   const double py = t1.py + t2.py;
@@ -65,10 +65,10 @@ int main(int argc, char* argv[]) {
   const std::string inputFileName =
       getArgument(argc, argv, "--input", "../../../../Samples/merged_mc_v2.3.root");
   const std::string outputFileName =
-      getArgument(argc, argv, "--output", "PhiSBHistograms.root");
+      getArgument(argc, argv, "--output", "KShortSBHistograms.root");
   const std::string treeName = getArgument(argc, argv, "--tree", "Tree");
-  const double massMin = getDoubleArgument(argc, argv, "--mass-min", kPhiMassWindowMin);
-  const double massMax = getDoubleArgument(argc, argv, "--mass-max", kPhiMassWindowMax);
+  const double massMin = getDoubleArgument(argc, argv, "--mass-min", kKShortMassWindowMin);
+  const double massMax = getDoubleArgument(argc, argv, "--mass-max", kKShortMassWindowMax);
 
   TFile inputFile(inputFileName.c_str(), "READ");
   if (inputFile.IsZombie()) {
@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
   double recoPy[kMaxReco] = {0.0};
   double recoPz[kMaxReco] = {0.0};
   double recoCharge[kMaxReco] = {0.0};
-  long long recoPIDKaon[kMaxReco] = {0};
+  long long recoPIDPion[kMaxReco] = {0};
   long long recoGoodTrack[kMaxReco] = {0};
 
   tree->SetBranchAddress("NReco", &nReco);
@@ -96,18 +96,18 @@ int main(int argc, char* argv[]) {
   tree->SetBranchAddress("RecoPy", recoPy);
   tree->SetBranchAddress("RecoPz", recoPz);
   tree->SetBranchAddress("RecoCharge", recoCharge);
-  tree->SetBranchAddress("RecoPIDKaon", recoPIDKaon);
+  tree->SetBranchAddress("RecoPIDPion", recoPIDPion);
   tree->SetBranchAddress("RecoGoodTrack", recoGoodTrack);
 
-  TH1D hMass1Tag("hPhiSBMass1Tag",
-                 "#phi same-event reco pairs, 1-tag; m(K^{+}K^{-}) [GeV]; Pairs / bin",
-                 kPhiMassBins, massMin, massMax);
-  TH1D hMass2Tag("hPhiSBMass2Tag",
-                 "#phi same-event reco pairs, 2-tag; m(K^{+}K^{-}) [GeV]; Pairs / bin",
-                 kPhiMassBins, massMin, massMax);
-  TH1D hMassAccepted("hPhiSBMassAccepted",
-                     "#phi same-event reco pairs, accepted; m(K^{+}K^{-}) [GeV]; Pairs / bin",
-                     kPhiMassBins, massMin, massMax);
+  TH1D hMass1Tag("hKShortSBMass1Tag",
+                 "K_{S}^{0} same-event reco pairs, 1-tag; m(#pi^{+}#pi^{-}) [GeV]; Pairs / bin",
+                 kKShortMassBins, massMin, massMax);
+  TH1D hMass2Tag("hKShortSBMass2Tag",
+                 "K_{S}^{0} same-event reco pairs, 2-tag; m(#pi^{+}#pi^{-}) [GeV]; Pairs / bin",
+                 kKShortMassBins, massMin, massMax);
+  TH1D hMassAccepted("hKShortSBMassAccepted",
+                     "K_{S}^{0} same-event reco pairs, accepted; m(#pi^{+}#pi^{-}) [GeV]; Pairs / bin",
+                     kKShortMassBins, massMin, massMax);
 
   long long acceptedTracks = 0;
   long long totalOppositeSignPairs = 0;
@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
     for (long long i = 0; i < nReco; ++i) {
       if (recoGoodTrack[i] != 1) continue;
       if (recoCharge[i] == 0) continue;
-      TrackKinematics t{recoPx[i], recoPy[i], recoPz[i], recoCharge[i], recoPIDKaon[i]};
+      TrackKinematics t{recoPx[i], recoPy[i], recoPz[i], recoCharge[i], recoPIDPion[i]};
       if (!passAcceptance(t)) continue;
       tracks.push_back(t);
       acceptedTracks++;
@@ -140,8 +140,8 @@ int main(int argc, char* argv[]) {
         hMassAccepted.Fill(mass);
 
         int nTagged = 0;
-        if (tracks[i].kaonTag >= kKaonTagThreshold) nTagged++;
-        if (tracks[j].kaonTag >= kKaonTagThreshold) nTagged++;
+        if (tracks[i].pionTag >= kPionTagThreshold) nTagged++;
+        if (tracks[j].pionTag >= kPionTagThreshold) nTagged++;
 
         if (nTagged == 1) {
           hMass1Tag.Fill(mass);
@@ -161,9 +161,9 @@ int main(int argc, char* argv[]) {
   hMassAccepted.Write();
 
   TNamed selection("SelectionSummary",
-                   Form("Reco-only phi S+B pairs from same event: RecoGoodTrack==1, nonzero charge, "
-                        "0.15<=|cos(theta)|<=0.675 on both tracks, opposite charge, kaon mass hypothesis "
-                        "on both tracks, tag if RecoPIDKaon>=2, hist range %.3f-%.3f GeV",
+                   Form("Reco-only Kshort S+B pairs from same event: RecoGoodTrack==1, nonzero "
+                        "charge, 0.15<=|cos(theta)|<=0.675 on both tracks, opposite charge, pion "
+                        "mass hypothesis on both tracks, tag if RecoPIDPion>=2, hist range %.3f-%.3f GeV",
                         massMin, massMax));
   selection.Write();
   TParameter<long long>("AcceptedTracks", acceptedTracks).Write();
