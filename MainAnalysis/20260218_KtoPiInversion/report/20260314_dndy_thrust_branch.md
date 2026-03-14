@@ -65,6 +65,9 @@ These match the currently quoted `dN_ch/deta` branch strategy: binning envelope 
 - Generator comparisons:
   - `result/20260314/top_plots_dndy/KtoPi_vs_dNdY_DELPHI_vs_Generators.pdf`
   - `result/20260314/top_plots_dndy/Generator_dNdY_Comparison.pdf`
+  - current overlay now includes standalone `PYTHIA 6.428` and the exploratory
+    `X-SCAPE/JETSCAPE` colorless and hybrid control curves in addition to the
+    PYTHIA8/HERWIG/SHERPA set
 
 ## Note integration
 - Added a dedicated results subsection to:
@@ -76,8 +79,8 @@ These match the currently quoted `dN_ch/deta` branch strategy: binning envelope 
 
 ## Current limitations
 - The highest-activity `dN_ch/dy` bin is still the merged overflow bin from `keepBins=8`.
-- The thrust-axis generator comparison currently excludes standalone PYTHIA6 and
-  X-SCAPE/JETSCAPE because the local saved outputs for those studies only
-  retain event-level multiplicity summaries and not the particle-level
-  four-vectors needed to reconstruct `y_T` offline.
+- The thrust-axis `X-SCAPE/JETSCAPE` curves remain explicitly exploratory.
+  They are based on the current local colorless and hybrid-hadronization
+  controls, and the hybrid result still shows strong hadronization-model
+  sensitivity.
 - There is no external heavy-ion or pp comparison overlay for the thrust-axis variable, because those experiments do not report the same observable definition.

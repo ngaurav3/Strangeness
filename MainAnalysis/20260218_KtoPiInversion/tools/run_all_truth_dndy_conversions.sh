@@ -9,6 +9,7 @@ declare -a JOBS=(
   "result/20260314/pythia8_truth/pythia8_zpole_truth_400k.root result/20260314/pythia8_truth/pythia8_zpole_truth_400k_dndy.root"
   "result/20260314/pythia8_rope_truth/pythia8_zpole_truth_rope_400k.root result/20260314/pythia8_rope_truth/pythia8_zpole_truth_rope_400k_dndy.root"
   "result/20260314/pythia8_dire_truth/pythia8_zpole_truth_dire_400k.root result/20260314/pythia8_dire_truth/pythia8_zpole_truth_dire_400k_dndy.root"
+  "result/20260314/pythia6_truth/pythia6_zpole_truth_400k.root result/20260314/pythia6_truth/pythia6_zpole_truth_400k_dndy.root"
   "result/20260314/herwig_truth/herwig_ee_zpole_truth_400k.root result/20260314/herwig_truth/herwig_ee_zpole_truth_400k_dndy.root"
   "result/20260314/sherpa_truth/sherpa_ee_zpole_truth_400k.root result/20260314/sherpa_truth/sherpa_ee_zpole_truth_400k_dndy.root"
   "result/20260314/xscape_colorless/xscape_epem_colorless_zpole_truth_20k.root result/20260314/xscape_colorless/xscape_epem_colorless_zpole_truth_20k_dndy.root"

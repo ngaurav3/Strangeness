@@ -46,12 +46,27 @@ SHERPA_TRUTH_ROOT = os.environ.get(
     "KPI_DNDY_SHERPA_TRUTH_ROOT",
     "result/20260314/sherpa_truth/sherpa_ee_zpole_truth_400k_dndy.root",
 )
+PYTHIA6_TRUTH_ROOT = os.environ.get(
+    "KPI_DNDY_PYTHIA6_TRUTH_ROOT",
+    "result/20260314/pythia6_truth/pythia6_zpole_truth_400k_dndy.root",
+)
+XSCAPE_COLORLESS_TRUTH_ROOT = os.environ.get(
+    "KPI_DNDY_XSCAPE_COLORLESS_TRUTH_ROOT",
+    "result/20260314/xscape_colorless/xscape_epem_colorless_zpole_truth_20k_dndy.root",
+)
+XSCAPE_HYBRID_TRUTH_ROOT = os.environ.get(
+    "KPI_DNDY_XSCAPE_HYBRID_TRUTH_ROOT",
+    "result/20260314/xscape_hybrid/xscape_epem_hybrid_zpole_truth_clean20k_dndy.root",
+)
 
 PYTHIA8_LABEL = "PYTHIA v8.317, Tune:ee=7"
 PYTHIA8_ROPE_LABEL = "PYTHIA v8.317, DIPSY flavour ropes"
 DIRE_LABEL = "PYTHIA v8.315, Dire shower"
 HERWIG_LABEL = "HERWIG v7.3.0 cluster"
 SHERPA_LABEL = "SHERPA v3.0.3, CSS+Ahadic"
+PYTHIA6_LABEL = "PYTHIA v6.428 default"
+XSCAPE_COLORLESS_LABEL = "X-SCAPE/JETSCAPE colorless"
+XSCAPE_HYBRID_LABEL = "X-SCAPE/JETSCAPE hybrid"
 
 
 def clone_hist(path, name):
@@ -269,6 +284,9 @@ def main():
     g_dire = load_curve(DIRE_TRUTH_ROOT, ROOT.kMagenta + 1, 9)
     g_herwig = load_curve(HERWIG_TRUTH_ROOT, ROOT.kGreen + 2, 4)
     g_sherpa = load_curve(SHERPA_TRUTH_ROOT, ROOT.kOrange + 7, 5)
+    g_py6 = load_curve(PYTHIA6_TRUTH_ROOT, ROOT.kPink + 7, 2)
+    g_xscape_colorless = load_curve(XSCAPE_COLORLESS_TRUTH_ROOT, ROOT.kOrange - 3, 8)
+    g_xscape_hybrid = load_curve(XSCAPE_HYBRID_TRUTH_ROOT, ROOT.kGray + 2, 6)
 
     c1 = ROOT.TCanvas("cDNdYGenerators", "", 900, 700)
     frame = h_data.Clone("frame_dndy_generators")
@@ -285,7 +303,7 @@ def main():
     g_data_sys.Draw("E2 SAME")
     g_data_stat.Draw("P SAME")
     g_mc_true_curve.Draw("L SAME")
-    for g in [g_py8, g_py8_rope, g_dire, g_herwig, g_sherpa]:
+    for g in [g_py8, g_py8_rope, g_dire, g_py6, g_herwig, g_sherpa, g_xscape_colorless, g_xscape_hybrid]:
         if g:
             g.Draw("L SAME")
 
@@ -304,10 +322,16 @@ def main():
         leg.AddEntry(g_py8_rope, PYTHIA8_ROPE_LABEL, "l")
     if g_dire:
         leg.AddEntry(g_dire, DIRE_LABEL, "l")
+    if g_py6:
+        leg.AddEntry(g_py6, PYTHIA6_LABEL, "l")
     if g_herwig:
         leg.AddEntry(g_herwig, HERWIG_LABEL, "l")
     if g_sherpa:
         leg.AddEntry(g_sherpa, SHERPA_LABEL, "l")
+    if g_xscape_colorless:
+        leg.AddEntry(g_xscape_colorless, XSCAPE_COLORLESS_LABEL, "l")
+    if g_xscape_hybrid:
+        leg.AddEntry(g_xscape_hybrid, XSCAPE_HYBRID_LABEL, "l")
     leg.Draw()
 
     header = ROOT.TLatex()
@@ -317,7 +341,6 @@ def main():
     header.DrawLatex(0.14, 0.94, "K/#pi vs thrust-axis dN_{ch}/dy")
     header.SetTextSize(0.028)
     header.DrawLatex(0.14, 0.895, "Stat: toy-calibrated" if toy_used else "Stat: Bayes diagonal propagation")
-    header.DrawLatex(0.14, 0.860, "PYTHIA6 and X-SCAPE omitted here: current local outputs lack particle-level four-vectors")
     draw_logo(c1)
     c1.SaveAs(os.path.join(OUT_DIR, "KtoPi_vs_dNdY_DELPHI_vs_Generators.pdf"))
     c1.SaveAs(os.path.join(OUT_DIR, "KtoPi_vs_dNdY_DELPHI_vs_Generators.png"))
@@ -327,6 +350,9 @@ def main():
     h_dire = load_shape(DIRE_TRUTH_ROOT, ROOT.kMagenta + 1, 9)
     h_herwig = load_shape(HERWIG_TRUTH_ROOT, ROOT.kGreen + 2, 4)
     h_sherpa = load_shape(SHERPA_TRUTH_ROOT, ROOT.kOrange + 7, 5)
+    h_py6 = load_shape(PYTHIA6_TRUTH_ROOT, ROOT.kPink + 7, 2)
+    h_xscape_colorless = load_shape(XSCAPE_COLORLESS_TRUTH_ROOT, ROOT.kOrange - 3, 8)
+    h_xscape_hybrid = load_shape(XSCAPE_HYBRID_TRUTH_ROOT, ROOT.kGray + 2, 6)
     if h_ref is None:
         raise RuntimeError("Missing standalone PYTHIA8 dN/dy truth shape")
     h_ref.SetLineColor(ROOT.kBlack)
@@ -351,7 +377,7 @@ def main():
     frame2.Reset()
     frame2.SetTitle(";dN_{ch}/dy (|y_{T}|<0.5);Normalized events")
     frame2.SetMinimum(0.0)
-    ymax = max(h.GetMaximum() for h in [h_ref, h_rope, h_dire, h_herwig, h_sherpa] if h is not None)
+    ymax = max(h.GetMaximum() for h in [h_ref, h_rope, h_dire, h_py6, h_herwig, h_sherpa, h_xscape_colorless, h_xscape_hybrid] if h is not None)
     frame2.SetMaximum(ymax * 1.35)
     frame2.GetXaxis().SetLimits(0.0, 31.0)
     frame2.GetXaxis().SetLabelSize(0)
@@ -360,22 +386,31 @@ def main():
     frame2.GetYaxis().SetTitleOffset(1.05)
     frame2.Draw("HIST")
     h_ref.Draw("HIST SAME")
-    for h in [h_rope, h_dire, h_herwig, h_sherpa]:
+    for h in [h_rope, h_dire, h_py6, h_herwig, h_sherpa, h_xscape_colorless, h_xscape_hybrid]:
         if h:
             h.Draw("HIST SAME")
 
-    leg2 = ROOT.TLegend(0.44, 0.61, 0.88, 0.88)
+    leg2 = ROOT.TLegend(0.34, 0.60, 0.88, 0.88)
     style_legend(leg2)
-    leg2.SetTextSize(0.029)
+    leg2.SetNColumns(2)
+    leg2.SetColumnSeparation(0.03)
+    leg2.SetMargin(0.18)
+    leg2.SetTextSize(0.025)
     leg2.AddEntry(h_ref, PYTHIA8_LABEL + " (reference)", "l")
     if h_rope:
         leg2.AddEntry(h_rope, PYTHIA8_ROPE_LABEL, "l")
     if h_dire:
         leg2.AddEntry(h_dire, DIRE_LABEL, "l")
+    if h_py6:
+        leg2.AddEntry(h_py6, PYTHIA6_LABEL, "l")
     if h_herwig:
         leg2.AddEntry(h_herwig, HERWIG_LABEL, "l")
     if h_sherpa:
         leg2.AddEntry(h_sherpa, SHERPA_LABEL, "l")
+    if h_xscape_colorless:
+        leg2.AddEntry(h_xscape_colorless, XSCAPE_COLORLESS_LABEL, "l")
+    if h_xscape_hybrid:
+        leg2.AddEntry(h_xscape_hybrid, XSCAPE_HYBRID_LABEL, "l")
     leg2.Draw()
     label = ROOT.TLatex()
     label.SetNDC()
@@ -404,8 +439,8 @@ def main():
     line.SetLineWidth(2)
     line.Draw()
 
-    keep = [h_ref, h_rope, h_dire, h_herwig, h_sherpa]
-    for src in [h_rope, h_dire, h_herwig, h_sherpa]:
+    keep = [h_ref, h_rope, h_dire, h_py6, h_herwig, h_sherpa, h_xscape_colorless, h_xscape_hybrid]
+    for src in [h_rope, h_dire, h_py6, h_herwig, h_sherpa, h_xscape_colorless, h_xscape_hybrid]:
         if src is None:
             continue
         ratio = src.Clone(src.GetName() + "_ratio")
