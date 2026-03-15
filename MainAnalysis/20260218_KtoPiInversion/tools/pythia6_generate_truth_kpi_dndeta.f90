@@ -1,7 +1,7 @@
 program pythia6truth
   implicit double precision(a-h, o-z)
-  integer pychge
-  external pydata
+  integer pychge, pycomp
+  external pydata, pychge, pycomp
 
   integer :: n, npad
   integer :: k(4000,5)
@@ -24,10 +24,11 @@ program pythia6truth
   common /pypars/ mstp, parp, msti, pari
 
   character(len=256) :: arg, outfile, particlefile
-  integer :: nargs, nev, iev, i, idc, ks, kf, iq3, apkf, nfinal
-  logical :: write_particles
+  integer :: nargs, nev, iev, i, idc, ks, kf, iq3, apkf, nfinal, kc
+  logical :: write_particles, weakdaughter
   integer :: nacc, nch, ncheta05, npipt0405, nkpt0405
-  double precision :: ecm, px, py, pz, pt, eta, pabs, kpi, q, ev, mv
+  integer :: nch_incl, ncheta05_incl, npipt0405_incl, nkpt0405_incl
+  double precision :: ecm, px, py, pz, pt, eta, pabs, kpi, q, ev, mv, kpi_incl
 
   nargs = command_argument_count()
   if (nargs < 2) then
@@ -46,10 +47,11 @@ program pythia6truth
   end if
 
   open(unit=20, file=trim(outfile), status='replace', action='write')
-  write(20,'(A)') '# event nChEta05 nPiPt0405 nKPt0405 kPiPt0405'
+  write(20,'(A)') '# event nChEta05 nPiPt0405 nKPt0405 kPiPt0405 ' // &
+                  'nChEta05Inclusive nPiPt0405Inclusive nKPt0405Inclusive kPiPt0405Inclusive'
   if (write_particles) then
     open(unit=21, file=trim(particlefile), status='replace', action='write')
-    write(21,'(A)') '# PYTHIA6_FINAL_STATE v1 | idx pid charge E Px Py Pz M'
+    write(21,'(A)') '# PYTHIA6_FINAL_STATE v2 | idx pid charge E Px Py Pz M weakDaughter'
   end if
 
   ecm = 91.2d0
@@ -72,6 +74,11 @@ program pythia6truth
     npipt0405 = 0
     nkpt0405 = 0
     kpi = -1d0
+    nch_incl = 0
+    ncheta05_incl = 0
+    npipt0405_incl = 0
+    nkpt0405_incl = 0
+    kpi_incl = -1d0
     nfinal = 0
 
     do i = 1, n
@@ -80,6 +87,7 @@ program pythia6truth
       nfinal = nfinal + 1
       kf = k(i,2)
       iq3 = pychge(kf)
+      weakdaughter = has_long_lived_ancestor(i)
 
       px = p(i,1)
       py = p(i,2)
@@ -98,15 +106,23 @@ program pythia6truth
         end if
       end if
 
-      if (iq3 /= 0) then
-        nch = nch + 1
-        if (dabs(eta) < 0.5d0) ncheta05 = ncheta05 + 1
+      if (is_counted_charged_for_activity_pdg(kf)) then
+        nch_incl = nch_incl + 1
+        if (.not. weakdaughter) nch = nch + 1
+        if (dabs(eta) < 0.5d0) then
+          ncheta05_incl = ncheta05_incl + 1
+          if (.not. weakdaughter) ncheta05 = ncheta05 + 1
+        end if
       end if
 
       apkf = abs(kf)
-      if (iq3 /= 0 .and. pt >= 0.4d0 .and. pt < 5.0d0) then
-        if (apkf == 211) npipt0405 = npipt0405 + 1
-        if (apkf == 321) nkpt0405 = nkpt0405 + 1
+      if (is_counted_pion_for_ratio_pdg(kf, px, py, pz)) then
+        npipt0405_incl = npipt0405_incl + 1
+        if (.not. weakdaughter) npipt0405 = npipt0405 + 1
+      end if
+      if (is_counted_kaon_for_ratio_pdg(kf, px, py, pz)) then
+        nkpt0405_incl = nkpt0405_incl + 1
+        if (.not. weakdaughter) nkpt0405 = nkpt0405 + 1
       end if
     end do
 
@@ -117,17 +133,19 @@ program pythia6truth
         if (ks /= 1) cycle
         kf = k(i,2)
         iq3 = pychge(kf)
-        q = dble(iq3) / 3.d0
+        q = counted_charge_from_pdg(kf)
         ev = p(i,4)
         mv = p(i,5)
-        write(21,'(I10,1X,I10,1X,F8.3,1X,ES20.10,1X,ES20.10,1X,ES20.10,1X,ES20.10,1X,ES20.10)') &
-          i, kf, q, ev, p(i,1), p(i,2), p(i,3), mv
+        weakdaughter = has_long_lived_ancestor(i)
+        write(21,'(I10,1X,I10,1X,F8.3,1X,ES20.10,1X,ES20.10,1X,ES20.10,1X,ES20.10,1X,ES20.10,1X,I2)') &
+          i, kf, q, ev, p(i,1), p(i,2), p(i,3), mv, merge(1, 0, weakdaughter)
       end do
     end if
 
     if (npipt0405 > 0) kpi = dble(nkpt0405) / dble(npipt0405)
-    write(20,'(I10,1X,I10,1X,I10,1X,I10,1X,F12.6)') &
-      nacc, ncheta05, npipt0405, nkpt0405, kpi
+    if (npipt0405_incl > 0) kpi_incl = dble(nkpt0405_incl) / dble(npipt0405_incl)
+    write(20,'(I10,1X,I10,1X,I10,1X,I10,1X,F12.6,1X,I10,1X,I10,1X,I10,1X,F12.6)') &
+      nacc, ncheta05, npipt0405, nkpt0405, kpi, ncheta05_incl, npipt0405_incl, nkpt0405_incl, kpi_incl
   end do
 
   call pystat(1)
@@ -136,4 +154,89 @@ program pythia6truth
   write(*,*) 'Wrote truth-level sample to ', trim(outfile)
   if (write_particles) write(*,*) 'Wrote particle-level sample to ', trim(particlefile)
   write(*,*) 'Accepted events: ', nacc
+contains
+  logical function is_counted_charged_for_activity_pdg(kf) result(flag)
+    integer, intent(in) :: kf
+    integer :: apkf
+    apkf = abs(kf)
+    flag = (apkf == 11 .or. apkf == 13 .or. apkf == 15 .or. &
+            apkf == 211 .or. apkf == 321 .or. apkf == 2212 .or. &
+            apkf == 3112 .or. apkf == 3222 .or. apkf == 3312 .or. &
+            apkf == 3334 .or. apkf == 411 .or. apkf == 431 .or. &
+            apkf == 521 .or. apkf == 541 .or. apkf == 24)
+  end function is_counted_charged_for_activity_pdg
+
+  logical function pass_pid_fiducial_from_mom(px, py, pz) result(flag)
+    double precision, intent(in) :: px, py, pz
+    double precision :: p2, abscos
+    p2 = px*px + py*py + pz*pz
+    if (p2 <= 0.d0) then
+      flag = .false.
+      return
+    end if
+    abscos = dabs(pz / dsqrt(p2))
+    flag = (abscos > 0.15d0 .and. abscos < 0.675d0)
+  end function pass_pid_fiducial_from_mom
+
+  double precision function counted_charge_from_pdg(kf) result(q)
+    integer, intent(in) :: kf
+    q = 0.d0
+    select case (kf)
+    case (11, 13, 15, 3112, 3312, 3334)
+      q = -1.d0
+    case (-11, -13, -15, -3112, -3312, -3334)
+      q = +1.d0
+    case (211, 321, 2212, 3222, 411, 431, 521, 541, 24)
+      q = +1.d0
+    case (-211, -321, -2212, -3222, -411, -431, -521, -541, -24)
+      q = -1.d0
+    case default
+      q = 0.d0
+    end select
+  end function counted_charge_from_pdg
+
+  logical function is_counted_pion_for_ratio_pdg(kf, px, py, pz) result(flag)
+    integer, intent(in) :: kf
+    double precision, intent(in) :: px, py, pz
+    double precision :: pt
+    pt = dsqrt(px*px + py*py)
+    flag = (abs(kf) == 211 .and. pt >= 0.4d0 .and. pt < 5.0d0 .and. &
+            pass_pid_fiducial_from_mom(px, py, pz))
+  end function is_counted_pion_for_ratio_pdg
+
+  logical function is_counted_kaon_for_ratio_pdg(kf, px, py, pz) result(flag)
+    integer, intent(in) :: kf
+    double precision, intent(in) :: px, py, pz
+    double precision :: pt
+    pt = dsqrt(px*px + py*py)
+    flag = (abs(kf) == 321 .and. pt >= 0.4d0 .and. pt < 5.0d0 .and. &
+            pass_pid_fiducial_from_mom(px, py, pz))
+  end function is_counted_kaon_for_ratio_pdg
+
+  recursive logical function has_long_lived_ancestor(idx) result(flag)
+    integer, intent(in) :: idx
+    integer :: mother, parentkf, parentkc
+
+    if (idx <= 0 .or. idx > n) then
+      flag = .false.
+      return
+    end if
+
+    mother = k(idx,3)
+    if (mother <= 0 .or. mother > n) then
+      flag = .false.
+      return
+    end if
+
+    parentkf = k(mother,2)
+    parentkc = pycomp(parentkf)
+    if (parentkc > 0) then
+      if (pmas(parentkc,4) > 10.d0) then
+        flag = .true.
+        return
+      end if
+    end if
+
+    flag = has_long_lived_ancestor(mother)
+  end function has_long_lived_ancestor
 end program pythia6truth

@@ -50,6 +50,7 @@
 
 // Strangeness tree messenger
 #include "StrangenessMessenger.h"
+#include "TruthCountingPolicy.h"
 
 using namespace std;
 
@@ -133,23 +134,7 @@ struct KtoPiParameters
 
 static bool IsChargedPDG(long long pdg)
 {
-   const long long apdg = (pdg >= 0 ? pdg : -pdg);
-   static std::unordered_map<long long, bool> cache;
-   auto it = cache.find(apdg);
-   if (it != cache.end())
-      return it->second;
-
-   bool charged = false;
-   // Common stable charged particles and long-lived charged hadrons.
-   if (apdg == 11 || apdg == 13 || apdg == 15 ||          // e, mu, tau
-       apdg == 211 || apdg == 321 || apdg == 2212 ||      // pi, K, p
-       apdg == 3112 || apdg == 3222 || apdg == 3312 ||    // Sigma-, Sigma+, Xi-
-       apdg == 3334 || apdg == 411 || apdg == 431 ||      // Omega-, D+, Ds+
-       apdg == 521 || apdg == 541 || apdg == 24)          // B+, Bc+, W+
-      charged = true;
-
-   cache[apdg] = charged;
-   return charged;
+   return TruthCountingPolicy::IsCountedChargedForActivity(pdg);
 }
 
 static bool ComputeAxisRapidity(double px, double py, double pz, double e,
@@ -1128,13 +1113,8 @@ public:
 
       auto passPIDFiducialFromMom = [&](double px, double py, double pz) -> bool
       {
-         if (!par.UsePIDFiducial)
-            return true;
-         const double p2 = px * px + py * py + pz * pz;
-         if (p2 <= 0.0)
-            return false;
-         const double absCos = std::abs(pz / std::sqrt(p2));
-         return (absCos > par.PIDTrackAbsCosMin && absCos < par.PIDTrackAbsCosMax);
+         return TruthCountingPolicy::PassPIDFiducialFromMom(
+            px, py, pz, par.UsePIDFiducial, par.PIDTrackAbsCosMin, par.PIDTrackAbsCosMax);
       };
 
       ProgressBar Bar(cout, nEntries);

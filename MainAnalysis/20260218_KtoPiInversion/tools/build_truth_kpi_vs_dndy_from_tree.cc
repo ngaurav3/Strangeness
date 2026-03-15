@@ -1,6 +1,8 @@
 #include "Pythia8/Analysis.h"
 #include "Pythia8/Event.h"
 
+#include "../include/TruthCountingPolicy.h"
+
 #include "TFile.h"
 #include "TH1D.h"
 #include "TNamed.h"
@@ -98,6 +100,7 @@ int main(int argc, char *argv[]) {
   hDNdY->Sumw2();
 
   std::vector<int> *pdg = nullptr;
+  std::vector<int> *isWeakDecayDaughter = nullptr;
   std::vector<float> *charge = nullptr;
   std::vector<float> *px = nullptr;
   std::vector<float> *py = nullptr;
@@ -105,8 +108,12 @@ int main(int argc, char *argv[]) {
   std::vector<float> *energy = nullptr;
   std::vector<float> *mass = nullptr;
   std::vector<float> *pt = nullptr;
+  const bool hasWeakVetoBranch = (tree->GetBranch("isWeakDecayDaughter") != nullptr);
 
   tree->SetBranchAddress("pdg", &pdg);
+  if (hasWeakVetoBranch) {
+    tree->SetBranchAddress("isWeakDecayDaughter", &isWeakDecayDaughter);
+  }
   tree->SetBranchAddress("charge", &charge);
   tree->SetBranchAddress("px", &px);
   tree->SetBranchAddress("py", &py);
@@ -153,16 +160,17 @@ int main(int argc, char *argv[]) {
     int nPiPt0405 = 0;
     int nKPt0405 = 0;
     for (int j = 0; j < n; ++j) {
+      const bool veto = (hasWeakVetoBranch && isWeakDecayDaughter && j < static_cast<int>(isWeakDecayDaughter->size()) &&
+                         (*isWeakDecayDaughter)[j] != 0);
       bool ok = false;
       const double yT = computeAxisRapidity((*px)[j], (*py)[j], (*pz)[j], (*energy)[j], ax, ay, az, ok);
-      if ((*charge)[j] != 0.0f && ok && std::abs(yT) < 0.5) {
+      if (!veto && (*charge)[j] != 0.0f && ok && std::abs(yT) < 0.5) {
         ++nChY05;
       }
-      const int apdg = std::abs((*pdg)[j]);
-      const double ptv = (*pt)[j];
-      if (ptv >= 0.4 && ptv < 5.0 && (*charge)[j] != 0.0f) {
-        if (apdg == 211) ++nPiPt0405;
-        if (apdg == 321) ++nKPt0405;
+      if (!veto && (*charge)[j] != 0.0f) {
+        const int pid = (*pdg)[j];
+        if (TruthCountingPolicy::IsCountedPionForRatio(pid, (*px)[j], (*py)[j], (*pz)[j])) ++nPiPt0405;
+        if (TruthCountingPolicy::IsCountedKaonForRatio(pid, (*px)[j], (*py)[j], (*pz)[j])) ++nKPt0405;
       }
     }
 
@@ -186,6 +194,11 @@ int main(int argc, char *argv[]) {
   TNamed("sourceTruthFile", inputPath.c_str()).Write();
   TNamed("templateDNdYFile", templatePath.c_str()).Write();
   TNamed("thrustDefinition", "Pythia8::Thrust(select=1) on stored final-state particles").Write();
+  TNamed("weakDecayDaughterPolicy",
+         hasWeakVetoBranch ?
+             "dNdY and K/pi counts veto particles with isWeakDecayDaughter!=0; thrust axis still built from all stored final-state particles" :
+             "No isWeakDecayDaughter branch found; counts use all stored final-state particles")
+      .Write();
   TParameter<long long>("nProcessed", nEntries).Write();
   TParameter<long long>("nAccepted", nAccepted).Write();
   TParameter<long long>("nThrustFail", nThrustFail).Write();

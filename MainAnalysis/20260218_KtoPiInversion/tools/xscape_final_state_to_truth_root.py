@@ -8,20 +8,20 @@ import ROOT
 
 ROOT.gROOT.SetBatch(True)
 
+from truth_counting_policy import (
+    is_counted_charged_for_activity,
+    is_counted_kaon_for_ratio,
+    is_counted_pion_for_ratio,
+    is_counted_proton_for_ratio,
+    policy_charge_from_pdg,
+)
+
 
 def compute_eta(px: float, py: float, pz: float) -> float:
     p = math.sqrt(px * px + py * py + pz * pz)
     if p <= abs(pz):
         return 1e9 if pz >= 0 else -1e9
     return 0.5 * math.log((p + pz) / (p - pz))
-
-
-def particle_charge(db, pid: int) -> float:
-    particle = db.GetParticle(pid)
-    if not particle:
-        return 0.0
-    return particle.Charge() / 3.0
-
 
 def main() -> int:
     if len(sys.argv) != 3:
@@ -41,18 +41,27 @@ def main() -> int:
     tree = ROOT.TTree("Events", "Converted X-SCAPE final-state hadrons")
 
     n_ch_eta05 = array("i", [0])
+    n_ch_eta05_inclusive = array("i", [0])
     n_pi_pt0405 = array("i", [0])
+    n_pi_pt0405_inclusive = array("i", [0])
     n_k_pt0405 = array("i", [0])
+    n_k_pt0405_inclusive = array("i", [0])
     n_p_pt0405 = array("i", [0])
     k_pi_pt0405 = array("d", [0.0])
+    k_pi_pt0405_inclusive = array("d", [0.0])
 
     tree.Branch("nChEta05", n_ch_eta05, "nChEta05/I")
+    tree.Branch("nChEta05Inclusive", n_ch_eta05_inclusive, "nChEta05Inclusive/I")
     tree.Branch("nPiPt0405", n_pi_pt0405, "nPiPt0405/I")
+    tree.Branch("nPiPt0405Inclusive", n_pi_pt0405_inclusive, "nPiPt0405Inclusive/I")
     tree.Branch("nKPt0405", n_k_pt0405, "nKPt0405/I")
+    tree.Branch("nKPt0405Inclusive", n_k_pt0405_inclusive, "nKPt0405Inclusive/I")
     tree.Branch("nPPt0405", n_p_pt0405, "nPPt0405/I")
     tree.Branch("kPiPt0405", k_pi_pt0405, "kPiPt0405/D")
+    tree.Branch("kPiPt0405Inclusive", k_pi_pt0405_inclusive, "kPiPt0405Inclusive/D")
 
     pdg = ROOT.std.vector("int")()
+    is_weak_decay_daughter = ROOT.std.vector("int")()
     charge = ROOT.std.vector("float")()
     px = ROOT.std.vector("float")()
     py = ROOT.std.vector("float")()
@@ -64,6 +73,7 @@ def main() -> int:
     phi = ROOT.std.vector("float")()
 
     tree.Branch("pdg", pdg)
+    tree.Branch("isWeakDecayDaughter", is_weak_decay_daughter)
     tree.Branch("charge", charge)
     tree.Branch("px", px)
     tree.Branch("py", py)
@@ -88,6 +98,11 @@ def main() -> int:
         k_pi_pt0405[0] = (
             float(n_k_pt0405[0]) / float(n_pi_pt0405[0]) if n_pi_pt0405[0] > 0 else -1.0
         )
+        k_pi_pt0405_inclusive[0] = (
+            float(n_k_pt0405_inclusive[0]) / float(n_pi_pt0405_inclusive[0])
+            if n_pi_pt0405_inclusive[0] > 0
+            else -1.0
+        )
         tree.Fill()
         h_nch.Fill(float(n_ch_eta05[0]))
         total_k += n_k_pt0405[0]
@@ -96,11 +111,16 @@ def main() -> int:
 
     def reset_event():
         n_ch_eta05[0] = 0
+        n_ch_eta05_inclusive[0] = 0
         n_pi_pt0405[0] = 0
+        n_pi_pt0405_inclusive[0] = 0
         n_k_pt0405[0] = 0
+        n_k_pt0405_inclusive[0] = 0
         n_p_pt0405[0] = 0
         k_pi_pt0405[0] = -1.0
+        k_pi_pt0405_inclusive[0] = -1.0
         pdg.clear()
+        is_weak_decay_daughter.clear()
         charge.clear()
         px.clear()
         py.clear()
@@ -140,11 +160,12 @@ def main() -> int:
             ptv = math.sqrt(pxv * pxv + pyv * pyv)
             etav = compute_eta(pxv, pyv, pzv)
             phiv = math.atan2(pyv, pxv)
-            q = particle_charge(db, pid)
+            q = policy_charge_from_pdg(pid)
             particle = db.GetParticle(pid)
             mv = particle.Mass() if particle else max(ev * ev - pxv * pxv - pyv * pyv - pzv * pzv, 0.0) ** 0.5
 
             pdg.push_back(pid)
+            is_weak_decay_daughter.push_back(0)
             charge.push_back(float(q))
             px.push_back(float(pxv))
             py.push_back(float(pyv))
@@ -155,16 +176,18 @@ def main() -> int:
             eta.push_back(float(etav))
             phi.push_back(float(phiv))
 
-            if abs(q) > 1e-9 and abs(etav) < 0.5:
+            if is_counted_charged_for_activity(pid) and abs(etav) < 0.5:
                 n_ch_eta05[0] += 1
+                n_ch_eta05_inclusive[0] += 1
 
-            if 0.4 < ptv < 5.0:
-                if pid == 211 or pid == -211:
-                    n_pi_pt0405[0] += 1
-                elif pid == 321 or pid == -321:
-                    n_k_pt0405[0] += 1
-                elif pid == 2212 or pid == -2212:
-                    n_p_pt0405[0] += 1
+            if is_counted_pion_for_ratio(pid, pxv, pyv, pzv):
+                n_pi_pt0405[0] += 1
+                n_pi_pt0405_inclusive[0] += 1
+            elif is_counted_kaon_for_ratio(pid, pxv, pyv, pzv):
+                n_k_pt0405[0] += 1
+                n_k_pt0405_inclusive[0] += 1
+            elif is_counted_proton_for_ratio(pid, pxv, pyv, pzv):
+                n_p_pt0405[0] += 1
 
     if seen_header:
         flush_event()
