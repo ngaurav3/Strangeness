@@ -59,8 +59,8 @@ This removes the previous mismatch where the `dN_{ch}/d\eta` unfolding used reco
 ### 4. Overflow-tail merge in the high-activity region
 A final visible overflow bin was added in the unfolding stage to stabilize the sparsely populated high-activity tail.
 
-Current treatment:
-- collapse bins `10..16` into the final visible bin `10`
+Current working treatment:
+- collapse bins `8..16` into the final visible bin `8`
 - apply the same collapse to:
   - reco spectra
   - truth priors
@@ -71,7 +71,7 @@ Implementation:
 - [runDNdEtaUnfolding_PoverPi_BayesSVD.C](../runDNdEtaUnfolding_PoverPi_BayesSVD.C)
 
 Console message from the current nominal macro:
-- `dN/deta overflow treatment: collapsing bins 10..16 into final visible bin 10`
+- `dN/deta overflow treatment: collapsing bins 8..16 into final visible bin 8`
 
 ## Rebuilt outputs
 Nominal and binning-variation files were refreshed for the updated chain.
@@ -140,20 +140,29 @@ Interpretation:
   species-level drop already becomes visible from about bin 6 onward
 
 ### Explicit tail-resolution path
-The next technical step is now treated as a scanned parameter study rather than
-as a hidden heuristic.
+The tail treatment is now an explicit scanned parameter study rather than a
+hidden heuristic.
 
 - the unfolding macro accepts an explicit `keepBins` override
-- the intended scan is `keepBins = 8, 9, 10`
-- the acceptance rule is:
+- the scanned values were `keepBins = 8, 9, 10`
+- the working choice is now `keepBins = 8`
+- the acceptance rule was:
   1. ratio-level `K/\pi` refolding remains acceptable
   2. species-level kaon and pion tail bins no longer collapse catastrophically
   3. final merged-bin purity and stability improve beyond the current
      marginal `0.20-0.25` range
 
-If no reasonable `keepBins` choice satisfies those criteria, the last
-`dN_{ch}/d\eta` point should be downgraded to an explicitly cautionary overflow
-bin or removed from the quoted physics interpretation.
+`keepBins = 8` is now the active status branch because it gives the best
+ratio-level behavior and the cleanest merged-bin migration metrics. It still
+does not fully solve the species-level final-bin problem, so the last
+`dN_{ch}/d\eta` point remains a cautionary merged-overflow point in the
+physics interpretation.
+
+### Statistical uncertainty calibration
+The pseudo-experiment study showed that the raw diagonal Bayes statistical
+errors under-cover badly. The current `K/\pi` status plots therefore use the
+per-bin toy-calibrated absolute RMSE from the toy study as the quoted
+statistical bar, rather than the raw diagonal Bayes error output.
 
 ### Migration quality summary
 From `result/20260310/unfolding_validation/migration_metrics.csv`:
