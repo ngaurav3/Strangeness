@@ -127,7 +127,7 @@ struct KtoPiParameters
    std::vector<double> PtBinEdges;  // if non-empty, overrides NPtBins/PtMin/PtMax
 
    KtoPiParameters()
-      : input("sample/Strangeness/merged_pythia_v2.5.root")
+      : input("sample/Strangeness/merged_pythia8ext_v2.6.root")
       , output("output/KtoPi.root")
       , MaxNchTag(60)
       , MaxEvents(-1)
